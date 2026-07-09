@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  /* --- Brand palette: "Amara" — Nairobi safari-luxury --- */
+  --color-ink: #14231c;       /* deep forest-charcoal — primary text / dark surfaces */
+  --color-canvas: #f8f4ea;    /* warm ivory — base background */
+  --color-canvas-soft: #f1ead9;
+  --color-gold: #b08d3f;      /* muted brass — primary accent */
+  --color-gold-soft: #d9c290;
+  --color-teal: #1f3f38;      /* deep teal-green — secondary/dark accent */
+  --color-clay: #9c5b3c;      /* muted clay — sparing highlight, never CTA-primary */
+  --color-mist: #dce3da;      /* sage — borders, dividers */
+  --color-white: #fffdf8;
+
+  --font-display: var(--font-fraunces);
+  --font-body: var(--font-manrope);
+  --font-mono: var(--font-plex-mono);
+
+  --radius-card: 1.25rem;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 8px 30px -12px rgba(20, 35, 28, 0.25);
+  --shadow-lift: 0 20px 50px -20px rgba(20, 35, 28, 0.35);
+}
+
+.dark {
+  --color-ink: #f6f1e4;
+  --color-canvas: #0f1c16;
+  --color-canvas-soft: #16261e;
+  --color-mist: #2b3b32;
+  --color-white: #182821;
+}
+
+* {
+  border-color: var(--color-mist);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.font-mono-brand {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+/* Ticket-stub / boarding-pass divider used by the booking search widget */
+.stub-divider {
+  position: relative;
+}
+.stub-divider::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-left: 2px dashed color-mix(in oklab, var(--color-ink) 18%, transparent);
+}
+.stub-notch::before,
+.stub-notch::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: var(--color-canvas);
+  border-radius: 999px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.stub-notch {
+  position: relative;
+}
+.stub-notch::before {
+  left: -11px;
+}
+.stub-notch::after {
+  right: -11px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::selection {
+  background: var(--color-gold-soft);
+  color: var(--color-ink);
+}
+
+/* Visible keyboard focus */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-mist);
+  border-radius: 999px;
+}

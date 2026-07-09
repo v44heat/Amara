@@ -1,0 +1,542 @@
+// ============================================================================
+// Hotel Booking & Management System — Prisma Schema
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// ENUMS
+// ----------------------------------------------------------------------------
+
+enum Role {
+  GUEST
+  RECEPTIONIST
+  MANAGER
+  ADMINISTRATOR
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  MPESA
+  CARD
+  CASH
+}
+
+enum RoomStatus {
+  AVAILABLE
+  BOOKED
+  MAINTENANCE
+  CLEANING
+}
+
+enum HousekeepingStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+}
+
+enum MaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum RestaurantOrderStatus {
+  PLACED
+  PREPARING
+  SERVED
+  BILLED
+  CANCELLED
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMATION
+  PAYMENT_CONFIRMATION
+  BOOKING_CANCELLATION
+  CHECKIN_REMINDER
+  PROMOTION
+  SYSTEM
+}
+
+// ----------------------------------------------------------------------------
+// USERS & STAFF
+// ----------------------------------------------------------------------------
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String
+  firstName         String
+  lastName          String
+  phone             String?
+  role              Role      @default(GUEST)
+  isEmailVerified   Boolean   @default(false)
+  emailVerifyToken  String?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  avatarUrl         String?
+  loyaltyPoints     Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  bookings          Booking[]
+  payments          Payment[]
+  reviews           Review[]
+  wishlist          Wishlist[]
+  recentlyViewed    RecentlyViewed[]
+  searchHistory     SearchHistory[]
+  notifications     Notification[]
+  supportMessages   SupportMessage[]
+  staffProfile      Staff?
+  restaurantOrders  RestaurantOrder[]
+  reviewReplies     ReviewReply[]
+
+  @@map("users")
+}
+
+model Staff {
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  departmentId   String?
+  department     Department?  @relation(fields: [departmentId], references: [id])
+  position       String
+  hireDate       DateTime     @default(now())
+  isActive       Boolean      @default(true)
+  permissions    String[]     @default([])
+
+  schedules      WorkSchedule[]
+  housekeeping   Housekeeping[]
+  maintenance    MaintenanceRequest[]
+
+  @@map("staff")
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  staff       Staff[]
+
+  @@map("departments")
+}
+
+model WorkSchedule {
+  id        String   @id @default(cuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  shiftDate DateTime
+  startTime String
+  endTime   String
+  notes     String?
+
+  @@map("work_schedules")
+}
+
+// ----------------------------------------------------------------------------
+// HOTEL / ROOMS
+// ----------------------------------------------------------------------------
+
+model Hotel {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  address     String
+  city        String
+  country     String   @default("Kenya")
+  latitude    Float?
+  longitude   Float?
+  phone       String
+  email       String
+  starRating  Int      @default(5)
+  amenities   String[] @default([])
+  images      String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rooms       Room[]
+  roomTypes   RoomType[]
+  promoCodes  PromoCode[]
+
+  @@map("hotels")
+}
+
+model RoomType {
+  id           String   @id @default(cuid())
+  hotelId      String
+  hotel        Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  name         String
+  description  String
+  basePrice    Decimal  @db.Decimal(10, 2)
+  maxAdults    Int      @default(2)
+  maxChildren  Int      @default(1)
+  sizeSqm      Int?
+  bedType      String
+  numBeds      Int      @default(1)
+  images       String[] @default([])
+
+  rooms        Room[]
+  amenities    RoomTypeAmenity[]
+
+  @@map("room_types")
+}
+
+model Amenity {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  icon      String?
+  category  String?
+
+  roomTypes RoomTypeAmenity[]
+
+  @@map("amenities")
+}
+
+model RoomTypeAmenity {
+  id         String   @id @default(cuid())
+  roomTypeId String
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  amenityId  String
+  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@unique([roomTypeId, amenityId])
+  @@map("room_type_amenities")
+}
+
+model Room {
+  id                String       @id @default(cuid())
+  hotelId           String
+  hotel             Hotel        @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomTypeId        String
+  roomType          RoomType     @relation(fields: [roomTypeId], references: [id])
+  roomNumber        String
+  floor             Int
+  status            RoomStatus   @default(AVAILABLE)
+  pricePerNight     Decimal      @db.Decimal(10, 2)
+  cancellationPolicy String      @default("Free cancellation up to 48 hours before check-in.")
+  images            String[]    @default([])
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  bookingItems      BookingItem[]
+  reviews           Review[]
+  wishlist          Wishlist[]
+  recentlyViewed    RecentlyViewed[]
+  housekeeping      Housekeeping[]
+  maintenance       MaintenanceRequest[]
+
+  @@unique([hotelId, roomNumber])
+  @@map("rooms")
+}
+
+// ----------------------------------------------------------------------------
+// BOOKINGS
+// ----------------------------------------------------------------------------
+
+model Booking {
+  id              String        @id @default(cuid())
+  bookingRef      String        @unique
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  status          BookingStatus @default(PENDING)
+  checkIn         DateTime
+  checkOut        DateTime
+  adults          Int           @default(1)
+  children        Int           @default(0)
+  specialRequests String?
+  subtotal        Decimal       @db.Decimal(10, 2)
+  discount        Decimal       @db.Decimal(10, 2) @default(0)
+  total           Decimal       @db.Decimal(10, 2)
+  promoCodeId     String?
+  promoCode       PromoCode?    @relation(fields: [promoCodeId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  cancelledAt     DateTime?
+  cancellationReason String?
+
+  items           BookingItem[]
+  payments        Payment[]
+
+  @@map("bookings")
+}
+
+model BookingItem {
+  id         String   @id @default(cuid())
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  roomId     String
+  room       Room     @relation(fields: [roomId], references: [id])
+  nights     Int
+  pricePerNight Decimal @db.Decimal(10, 2)
+  lineTotal  Decimal  @db.Decimal(10, 2)
+
+  @@map("booking_items")
+}
+
+model PromoCode {
+  id            String    @id @default(cuid())
+  hotelId       String?
+  hotel         Hotel?    @relation(fields: [hotelId], references: [id])
+  code          String    @unique
+  description   String?
+  discountType  String    @default("PERCENTAGE") // PERCENTAGE | FIXED
+  discountValue Decimal   @db.Decimal(10, 2)
+  maxUses       Int?
+  usedCount     Int       @default(0)
+  validFrom     DateTime
+  validTo       DateTime
+  isActive      Boolean   @default(true)
+
+  bookings      Booking[]
+
+  @@map("promo_codes")
+}
+
+// ----------------------------------------------------------------------------
+// PAYMENTS
+// ----------------------------------------------------------------------------
+
+model Payment {
+  id              String        @id @default(cuid())
+  bookingId       String
+  booking         Booking       @relation(fields: [bookingId], references: [id])
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  amount          Decimal       @db.Decimal(10, 2)
+  currency        String        @default("KES")
+  mpesaCheckoutId String?
+  mpesaReceipt    String?
+  cardLast4       String?
+  receiptNumber   String        @unique
+  invoiceUrl      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("payments")
+}
+
+// ----------------------------------------------------------------------------
+// REVIEWS
+// ----------------------------------------------------------------------------
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+  rating    Int
+  comment   String
+  photos    String[] @default([])
+  isHidden  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  replies   ReviewReply[]
+
+  @@map("reviews")
+}
+
+model ReviewReply {
+  id        String   @id @default(cuid())
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  message   String
+  createdAt DateTime @default(now())
+
+  @@map("review_replies")
+}
+
+// ----------------------------------------------------------------------------
+// HOUSEKEEPING / MAINTENANCE
+// ----------------------------------------------------------------------------
+
+model Housekeeping {
+  id          String             @id @default(cuid())
+  roomId      String
+  room        Room               @relation(fields: [roomId], references: [id])
+  staffId     String?
+  staff       Staff?             @relation(fields: [staffId], references: [id])
+  status      HousekeepingStatus @default(PENDING)
+  scheduledAt DateTime
+  completedAt DateTime?
+  notes       String?
+
+  @@map("housekeeping")
+}
+
+model MaintenanceRequest {
+  id          String             @id @default(cuid())
+  roomId      String
+  room        Room               @relation(fields: [roomId], references: [id])
+  staffId     String?
+  staff       Staff?             @relation(fields: [staffId], references: [id])
+  issue       String
+  status      MaintenanceStatus  @default(OPEN)
+  createdAt   DateTime           @default(now())
+  resolvedAt  DateTime?
+
+  @@map("maintenance_requests")
+}
+
+// ----------------------------------------------------------------------------
+// RESTAURANT
+// ----------------------------------------------------------------------------
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  category    String
+  imageUrl    String?
+  isAvailable Boolean  @default(true)
+
+  orderItems  RestaurantOrderItem[]
+
+  @@map("menu_items")
+}
+
+model RestaurantOrder {
+  id          String                 @id @default(cuid())
+  userId      String
+  user        User                   @relation(fields: [userId], references: [id])
+  roomNumber  String?
+  tableNumber String?
+  status      RestaurantOrderStatus  @default(PLACED)
+  total       Decimal                @db.Decimal(10, 2)
+  createdAt   DateTime               @default(now())
+
+  items       RestaurantOrderItem[]
+
+  @@map("restaurant_orders")
+}
+
+model RestaurantOrderItem {
+  id        String          @id @default(cuid())
+  orderId   String
+  order     RestaurantOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem  MenuItem        @relation(fields: [menuItemId], references: [id])
+  quantity  Int             @default(1)
+  lineTotal Decimal         @db.Decimal(10, 2)
+
+  @@map("restaurant_order_items")
+}
+
+// ----------------------------------------------------------------------------
+// GUEST EXTRAS
+// ----------------------------------------------------------------------------
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roomId])
+  @@map("wishlist")
+}
+
+model RecentlyViewed {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  viewedAt  DateTime @default(now())
+
+  @@unique([userId, roomId])
+  @@map("recently_viewed")
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     Json
+  createdAt DateTime @default(now())
+
+  @@map("search_history")
+}
+
+model SupportMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  subject   String
+  message   String
+  isResolved Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("support_messages")
+}
+
+// ----------------------------------------------------------------------------
+// NOTIFICATIONS
+// ----------------------------------------------------------------------------
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@map("notifications")
+}
+
+// ----------------------------------------------------------------------------
+// NEWSLETTER / CONTACT (public marketing)
+// ----------------------------------------------------------------------------
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("newsletter_subscribers")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+
+  @@map("contact_messages")
+}
