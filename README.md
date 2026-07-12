@@ -60,19 +60,6 @@ Visit `localhost:3000`. Staff console at `/admin`, guest account at `/dashboard`
 | Housekeeping | `housekeeping@amarahotel.co.ke` | `Password123!` |
 | Guest | `guest@example.com` | `Password123!` |
 
-## Project structure
-
-```
-app/
-├── (marketing)         landing page, search, room detail, checkout
-├── dashboard/           guest area — bookings, payments, wishlist, profile
-├── admin/               staff console — rooms, bookings, staff, housekeeping, reports
-└── api/                 route handlers for everything above
-components/              ui primitives, layout, booking, dashboard, admin
-lib/                     auth, validation, availability, payments, cloudinary
-prisma/                  schema.prisma + seed.ts
-```
-
 ## Payments & media
 
 M-Pesa and card payments run in **mock mode** by default — no Safaricom or processor
