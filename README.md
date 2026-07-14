@@ -38,6 +38,7 @@ realistic mock mode so the entire flow works out of the box.
 | Payments | M-Pesa Daraja, card (mock-first, pluggable) |
 | Media | Cloudinary |
 | Charts | Recharts |
+| Photos | Find attached sample photos for cloudinary |
 
 ## Getting started
 
